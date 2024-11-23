@@ -20,10 +20,10 @@ const timeRanges = [
 
 type TimeFrameType = typeof timeRanges[number]['label'];
 
-export function DAORevenue({ dailyData }: { dailyData: DailyData[] }) {
+export function DailyVolume({ dailyData }: { dailyData: DailyData[] }) {
   const [selectedTimeframe, setSelectedTimeframe] = useState<TimeFrameType>('1M');
-  const [totalFees, setTotalFees] = useState(0);
-  const [averageDailyFees, setAverageDailyFees] = useState(0);
+  const [totalVolume, setTotalVolume] = useState(0);
+  const [averageDailyVolume, setAverageDailyVolume] = useState(0);
   const [chartData, setChartData] = useState<any[]>([]);
 
   useEffect(() => {
@@ -31,32 +31,29 @@ export function DAORevenue({ dailyData }: { dailyData: DailyData[] }) {
     const selectedRange = timeRanges.find(range => range.label === selectedTimeframe)!;
     const cutoffDate = now - (selectedRange.days * 24 * 60 * 60);
     
-    // Filter and prepare data
     const filteredData = dailyData
       .filter(day => day.date >= cutoffDate)
       .map(day => ({
         date: new Date(day.date * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-        fees: parseFloat(day.fees || '0'),
         volume: parseFloat(day.volume || '0')
       }))
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-    // Calculate totals
-    const total = filteredData.reduce((sum, day) => sum + day.fees, 0);
-    setTotalFees(total);
-    setAverageDailyFees(total / filteredData.length);
-    setChartData(filteredData.reverse());
+    const total = filteredData.reduce((sum, day) => sum + day.volume, 0);
+    setTotalVolume(total);
+    setAverageDailyVolume(total / filteredData.length);
+    setChartData(filteredData.reverse()); // Reverse to show oldest to newest
   }, [dailyData, selectedTimeframe]);
 
   return (
     <div className="bg-white rounded-lg">
       <div className="px-4 py-3 border-b flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-bold">DAO Revenue</h2>
+          <h2 className="text-xl font-bold">Daily Volume</h2>
           <div className="mt-1 text-sm text-gray-500">
-            Total Fees: {formatUSD(totalFees)}
+            Total Volume: {formatUSD(totalVolume)}
             <span className="mx-2">•</span>
-            Daily Average: {formatUSD(averageDailyFees)}
+            Daily Average: {formatUSD(averageDailyVolume)}
           </div>
         </div>
         <div className="flex space-x-2">
@@ -100,7 +97,7 @@ export function DAORevenue({ dailyData }: { dailyData: DailyData[] }) {
               tick={{ fontSize: 12, fill: '#6B7280' }}
             />
             <Tooltip 
-              formatter={(value: number) => [`$${value.toLocaleString()}`, 'Fees']}
+              formatter={(value: number) => [`$${value.toLocaleString()}`, 'Volume']}
               labelFormatter={(label) => label}
               contentStyle={{
                 backgroundColor: 'white',
@@ -110,7 +107,7 @@ export function DAORevenue({ dailyData }: { dailyData: DailyData[] }) {
               }}
             />
             <Bar 
-              dataKey="fees"
+              dataKey="volume"
               fill="#3B82F6"
               radius={[4, 4, 0, 0]}
             />

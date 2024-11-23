@@ -6,6 +6,8 @@ import { SUBGRAPH_URL } from '@/lib/api/graphql/client';
 import { DAILY_VOLUME_QUERY, BIGGEST_SWAPS_QUERY, SERVERS_QUERY } from '@/lib/api/graphql/queries';
 import { DAORevenue } from '@/components/revenue/DAORevenue';
 import { VolumeStats } from '@/components/volume/VolumeStats';
+import { DailyVolume } from '@/components/volume/DailyVolume';
+
 import { BiggestSwaps } from '@/components/swaps/BiggestSwaps';
 import { MarketMakers } from '@/components/market-makers/MarketMakers';
 import { SwapData } from '@/components/swaps/type';
@@ -132,6 +134,7 @@ export default function Home() {
       <div className="max-w-[1400px] mx-auto space-y-4">
         {volumes && <VolumeStats volumes={volumes} />}
         <DAORevenue dailyData={dailyData} />
+        <DailyVolume dailyData={dailyData} />
         <MarketMakers servers={servers} />
         {biggestSwaps && (
           <BiggestSwaps 
@@ -143,4 +146,6 @@ export default function Home() {
       </div>
     </main>
   );
+  
+  
 }

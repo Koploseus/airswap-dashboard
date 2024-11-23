@@ -9,8 +9,9 @@ export function MarketMakers({ servers }: { servers: ServerData[] }) {
           <thead>
             <tr className="bg-gray-50">
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">URL</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Tokens</th>
+              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500">Tokens</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Protocols</th>
+
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
@@ -26,12 +27,12 @@ export function MarketMakers({ servers }: { servers: ServerData[] }) {
                     {server.url}
                   </a>
                 </td>
-                <td className="px-4 py-3 text-sm">
+                <td className="px-4 py-3 text-center">
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                     {server.tokens.length} tokens
                   </span>
                 </td>
-                <td className="px-4 py-3 text-sm">
+                <td className="px-4 py-3">
                   <div className="flex flex-wrap gap-1">
                     {server.protocols.map((protocol, index) => (
                       <span 
@@ -43,6 +44,7 @@ export function MarketMakers({ servers }: { servers: ServerData[] }) {
                     ))}
                   </div>
                 </td>
+            
               </tr>
             ))}
           </tbody>
