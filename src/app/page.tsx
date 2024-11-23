@@ -1,19 +1,37 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { request } from 'graphql-request';
-import { SUBGRAPH_URL } from '@/lib/api/graphql/client';
-import { DAILY_VOLUME_QUERY, BIGGEST_SWAPS_QUERY, SERVERS_QUERY } from '@/lib/api/graphql/queries';
 import { DAORevenue } from '@/components/revenue/DAORevenue';
 import { VolumeStats } from '@/components/volume/VolumeStats';
 import { DailyVolume } from '@/components/volume/DailyVolume';
-
 import { BiggestSwaps } from '@/components/swaps/BiggestSwaps';
 import { MarketMakers } from '@/components/market-makers/MarketMakers';
 import { SwapData } from '@/components/swaps/type';
 import { ServerData } from '@/components/market-makers/types';
 import { DailyData } from '@/components/revenue/types';
 import { VolumeData } from '@/components/volume/type';
+import { DAILY_VOLUME_QUERY, BIGGEST_SWAPS_QUERY, SERVERS_QUERY } from '@/app/api/graphql/queries';
+
+
+
+async function secureRequest<T>(query: string, variables?: any): Promise<{ data: T }> {
+  const response = await fetch('/api/subgraph', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      query,
+      variables,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch data');
+  }
+
+  return response.json();
+}
 
 export default function Home() {
   const [selectedTimeframe, setSelectedTimeframe] = useState<'24h' | '7d' | '30d'>('24h');
@@ -30,34 +48,25 @@ export default function Home() {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!process.env.NEXT_PUBLIC_GRAPH_API_KEY) {
-        setError('API key not found');
-        setLoading(false);
-        return;
-      }
-
       try {
         const now = Math.floor(Date.now() / 1000);
         const timestamp24h = now - (24 * 60 * 60);
         const timestamp7d = now - (7 * 24 * 60 * 60);
         const timestamp30d = now - (30 * 24 * 60 * 60);
-        // Get data for 4 years to cover all possible timeframes
         const timestamp4y = now - (4 * 365 * 24 * 60 * 60);
 
-        const [dailyResponse, bigSwapsResponse, serversResponse] = await Promise.all([
-          request<{ dailies: DailyData[] }>(
-            SUBGRAPH_URL,
+        const [dailyResponse, swapsResponse, serversResponse] = await Promise.all([
+          secureRequest<{ dailies: DailyData[] }>(
             DAILY_VOLUME_QUERY,
             {
-              fromTimestamp: timestamp4y // Use 4y timestamp to get all needed data
+              timestamp: timestamp4y
             }
           ),
-          request<{
+          secureRequest<{
             last24h: SwapData[];
             last7d: SwapData[];
             last30d: SwapData[];
           }>(
-            SUBGRAPH_URL,
             BIGGEST_SWAPS_QUERY,
             { 
               timestamp24h,
@@ -66,14 +75,16 @@ export default function Home() {
               minAmount: "50000"
             }
           ),
-          request<{ servers: ServerData[] }>(
-            SUBGRAPH_URL,
+          secureRequest<{ servers: ServerData[] }>(
             SERVERS_QUERY
           ),
         ]);
 
-        // Store the daily data
-        setDailyData(dailyResponse.dailies);
+        if (!dailyResponse.data || !swapsResponse.data || !serversResponse.data) {
+          throw new Error('Invalid response data');
+        }
+
+        setDailyData(dailyResponse.data.dailies);
 
         // Calculate volumes for the cards
         const calculateRollingVolume = (data: DailyData[], fromTimestamp: number) => {
@@ -99,19 +110,19 @@ export default function Home() {
           return totalVolume;
         };
 
-        const volumes = {
-          '24h': calculateRollingVolume(dailyResponse.dailies, timestamp24h),
-          '7d': calculateRollingVolume(dailyResponse.dailies, timestamp7d),
-          '30d': calculateRollingVolume(dailyResponse.dailies, timestamp30d)
+        const volumeData = {
+          '24h': calculateRollingVolume(dailyResponse.data.dailies, timestamp24h),
+          '7d': calculateRollingVolume(dailyResponse.data.dailies, timestamp7d),
+          '30d': calculateRollingVolume(dailyResponse.data.dailies, timestamp30d)
         };
 
-        setVolumes(volumes);
+        setVolumes(volumeData);
         setBiggestSwaps({
-          '24h': bigSwapsResponse.last24h,
-          '7d': bigSwapsResponse.last7d,
-          '30d': bigSwapsResponse.last30d
+          '24h': swapsResponse.data.last24h,
+          '7d': swapsResponse.data.last7d,
+          '30d': swapsResponse.data.last30d
         });
-        setServers(serversResponse.servers);
+        setServers(serversResponse.data.servers);
         setLoading(false);
 
       } catch (err) {
@@ -146,6 +157,4 @@ export default function Home() {
       </div>
     </main>
   );
-  
-  
 }

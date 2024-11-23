@@ -1,9 +1,9 @@
 import { gql } from 'graphql-request';
 
 export const DAILY_VOLUME_QUERY = gql`
-  query GetDailyData($fromTimestamp: Int!) {
+  query GetDailyData($timestamp: Int!) {
     dailies(
-      where: { date_gte: $fromTimestamp }
+      where: { date_gte: $timestamp }
       orderBy: date
       orderDirection: desc
     ) {
@@ -13,6 +13,7 @@ export const DAILY_VOLUME_QUERY = gql`
     }
   }
 `;
+
 export const BIGGEST_SWAPS_QUERY = gql`
   query GetBigSwaps($timestamp24h: Int!, $timestamp7d: Int!, $timestamp30d: Int!, $minAmount: String!) {
     last24h: swapERC20S(
@@ -62,6 +63,7 @@ export const BIGGEST_SWAPS_QUERY = gql`
     }
   }
 `;
+
 export const SERVERS_QUERY = gql`
   query GetServers {
     servers(first: 100) {

@@ -1,6 +1,15 @@
 import { ServerData } from './types';
+import { ProtocolIds } from '@airswap/utils';
 
 export function MarketMakers({ servers }: { servers: ServerData[] }) {
+  const getProtocolName = (protocolId: string) => {
+    const normalizedId = protocolId.toLowerCase();
+    const protocolName = Object.entries(ProtocolIds).find(
+      ([_, value]) => value.toLowerCase() === normalizedId
+    )?.[0];
+    return protocolName || protocolId;
+  };
+
   return (
     <div className="bg-white rounded-lg">
       <h2 className="px-4 py-3 text-xl font-bold border-b">Market Makers</h2>
@@ -11,7 +20,6 @@ export function MarketMakers({ servers }: { servers: ServerData[] }) {
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">URL</th>
               <th className="px-4 py-3 text-center text-xs font-medium text-gray-500">Tokens</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Protocols</th>
-
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
@@ -39,12 +47,11 @@ export function MarketMakers({ servers }: { servers: ServerData[] }) {
                         key={`${server.id}-${protocol}-${index}`}
                         className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800"
                       >
-                        {protocol}
+                        {getProtocolName(protocol)}
                       </span>
                     ))}
                   </div>
                 </td>
-            
               </tr>
             ))}
           </tbody>

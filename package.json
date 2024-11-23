@@ -8,6 +8,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "@airswap/utils": "^5.0.2",
     "chart.js": "^4.4.0",
     "graphql": "^16.8.1",
     "graphql-request": "^6.1.0",
