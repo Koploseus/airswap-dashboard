@@ -120,7 +120,7 @@ export default function Home() {
     };
 
     fetchData();
-    const interval = setInterval(fetchData, 15000);
+    const interval = setInterval(fetchData, 120000);
     return () => clearInterval(interval);
   }, []);
 
