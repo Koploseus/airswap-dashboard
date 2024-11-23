@@ -36,14 +36,19 @@ export default function Home() {
 
       try {
         const now = Math.floor(Date.now() / 1000);
-        const timestamp24h = now - 24 * 60 * 60;
-        const timestamp7d = now - 7 * 24 * 60 * 60;
-        const timestamp30d = now - 30 * 24 * 60 * 60;
+        const timestamp24h = now - (24 * 60 * 60);
+        const timestamp7d = now - (7 * 24 * 60 * 60);
+        const timestamp30d = now - (30 * 24 * 60 * 60);
+        // Get data for 4 years to cover all possible timeframes
+        const timestamp4y = now - (4 * 365 * 24 * 60 * 60);
 
         const [dailyResponse, bigSwapsResponse, serversResponse] = await Promise.all([
           request<{ dailies: DailyData[] }>(
             SUBGRAPH_URL,
-            DAILY_VOLUME_QUERY
+            DAILY_VOLUME_QUERY,
+            {
+              fromTimestamp: timestamp4y // Use 4y timestamp to get all needed data
+            }
           ),
           request<{
             last24h: SwapData[];
@@ -65,37 +70,48 @@ export default function Home() {
           ),
         ]);
 
+        // Store the daily data
         setDailyData(dailyResponse.dailies);
 
-        // Calculate volumes from daily data
-        const days = dailyResponse.dailies.sort((a, b) => b.date - a.date);
-        
-        const volume24h = days
-          .filter(day => day.date > timestamp24h)
-          .reduce((sum, day) => sum + parseFloat(day.volume || '0'), 0);
+        // Calculate volumes for the cards
+        const calculateRollingVolume = (data: DailyData[], fromTimestamp: number) => {
+          let totalVolume = 0;
+          
+          data.forEach(day => {
+            const dayStart = day.date;
+            const dayEnd = dayStart + (24 * 60 * 60);
+            const dailyVolume = parseFloat(day.volume || '0');
 
-        const volume7d = days
-          .filter(day => day.date > timestamp7d && day.date <= timestamp24h)
-          .reduce((sum, day) => sum + parseFloat(day.volume || '0'), 0);
+            const overlapStart = Math.max(dayStart, fromTimestamp);
+            const overlapEnd = Math.min(dayEnd, now);
 
-        const volume30d = days
-          .filter(day => day.date > timestamp30d && day.date <= timestamp7d)
-          .reduce((sum, day) => sum + parseFloat(day.volume || '0'), 0);
+            if (overlapEnd > overlapStart) {
+              const overlapDuration = overlapEnd - overlapStart;
+              const dayDuration = dayEnd - dayStart;
+              const proportion = overlapDuration / dayDuration;
+              
+              totalVolume += dailyVolume * proportion;
+            }
+          });
 
-        setVolumes({
-          '24h': volume24h,
-          '7d': volume7d,
-          '30d': volume30d
-        });
+          return totalVolume;
+        };
 
+        const volumes = {
+          '24h': calculateRollingVolume(dailyResponse.dailies, timestamp24h),
+          '7d': calculateRollingVolume(dailyResponse.dailies, timestamp7d),
+          '30d': calculateRollingVolume(dailyResponse.dailies, timestamp30d)
+        };
+
+        setVolumes(volumes);
         setBiggestSwaps({
           '24h': bigSwapsResponse.last24h,
           '7d': bigSwapsResponse.last7d,
           '30d': bigSwapsResponse.last30d
         });
-
         setServers(serversResponse.servers);
         setLoading(false);
+
       } catch (err) {
         console.error('Fetch error:', err);
         setError(err instanceof Error ? err.message : 'Failed to fetch data');
@@ -104,7 +120,7 @@ export default function Home() {
     };
 
     fetchData();
-    const interval = setInterval(fetchData, 30000); // Refresh every 30 seconds
+    const interval = setInterval(fetchData, 15000);
     return () => clearInterval(interval);
   }, []);
 
@@ -115,8 +131,8 @@ export default function Home() {
     <main className="min-h-screen p-4 bg-gray-50">
       <div className="max-w-[1400px] mx-auto space-y-4">
         {volumes && <VolumeStats volumes={volumes} />}
-        {dailyData.length > 0 && <DAORevenue dailyData={dailyData} />}
-        {servers.length > 0 && <MarketMakers servers={servers} />}
+        <DAORevenue dailyData={dailyData} />
+        <MarketMakers servers={servers} />
         {biggestSwaps && (
           <BiggestSwaps 
             swaps={biggestSwaps}

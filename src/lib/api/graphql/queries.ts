@@ -1,8 +1,12 @@
 import { gql } from 'graphql-request';
 
 export const DAILY_VOLUME_QUERY = gql`
-  query GetDailyData {
-    dailies(orderBy: date, orderDirection: desc) {
+  query GetDailyData($fromTimestamp: Int!) {
+    dailies(
+      where: { date_gte: $fromTimestamp }
+      orderBy: date
+      orderDirection: desc
+    ) {
       date
       fees
       volume

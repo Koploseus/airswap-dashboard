@@ -5,29 +5,33 @@ import {
   XAxis, 
   YAxis, 
   Tooltip, 
-  ResponsiveContainer 
+  ResponsiveContainer,
+  CartesianGrid 
 } from 'recharts';
-import { DailyData, TimeRange } from './types';
+import { DailyData } from '@/components/revenue/types';
 import { formatUSD } from '@/lib/utils/format';
-import { formatDate } from '@/lib/utils/date';
 
-const timeRanges: TimeRange[] = [
+const timeRanges = [
   { label: '1M', days: 30 },
   { label: '6M', days: 180 },
   { label: '1Y', days: 365 },
   { label: '4Y', days: 1460 }
-];
+] as const;
+
+type TimeFrameType = typeof timeRanges[number]['label'];
 
 export function DAORevenue({ dailyData }: { dailyData: DailyData[] }) {
-  const [selectedRange, setSelectedRange] = useState<TimeRange>(timeRanges[0]);
-  const [totalFees, setTotalFees] = useState<number>(0);
-  const [averageDailyFees, setAverageDailyFees] = useState<number>(0);
+  const [selectedTimeframe, setSelectedTimeframe] = useState<TimeFrameType>('1M');
+  const [totalFees, setTotalFees] = useState(0);
+  const [averageDailyFees, setAverageDailyFees] = useState(0);
   const [chartData, setChartData] = useState<any[]>([]);
 
   useEffect(() => {
     const now = Math.floor(Date.now() / 1000);
+    const selectedRange = timeRanges.find(range => range.label === selectedTimeframe)!;
     const cutoffDate = now - (selectedRange.days * 24 * 60 * 60);
     
+    // Filter and prepare data
     const filteredData = dailyData
       .filter(day => day.date >= cutoffDate)
       .map(day => ({
@@ -37,12 +41,12 @@ export function DAORevenue({ dailyData }: { dailyData: DailyData[] }) {
       }))
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-    setChartData(filteredData);
-
+    // Calculate totals
     const total = filteredData.reduce((sum, day) => sum + day.fees, 0);
     setTotalFees(total);
-    setAverageDailyFees(total / (filteredData.length || 1));
-  }, [dailyData, selectedRange]);
+    setAverageDailyFees(total / filteredData.length);
+    setChartData(filteredData);
+  }, [dailyData, selectedTimeframe]);
 
   return (
     <div className="bg-white rounded-lg">
@@ -59,11 +63,11 @@ export function DAORevenue({ dailyData }: { dailyData: DailyData[] }) {
           {timeRanges.map((range) => (
             <button
               key={range.label}
-              onClick={() => setSelectedRange(range)}
+              onClick={() => setSelectedTimeframe(range.label)}
               className={`px-3 py-1 rounded ${
-                selectedRange.label === range.label 
+                selectedTimeframe === range.label 
                   ? 'bg-blue-600 text-white' 
-                  : 'bg-gray-100'
+                  : 'bg-gray-100 hover:bg-gray-200'
               }`}
             >
               {range.label}
@@ -73,23 +77,41 @@ export function DAORevenue({ dailyData }: { dailyData: DailyData[] }) {
       </div>
       <div className="p-4 h-80">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+          <BarChart 
+            data={chartData}
+            margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+          >
+            <CartesianGrid 
+              strokeDasharray="3 3" 
+              vertical={false}
+              stroke="#E5E7EB"
+            />
             <XAxis 
-              dataKey="date" 
-              tick={{ fontSize: 12 }}
+              dataKey="date"
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 12, fill: '#6B7280' }}
               interval="preserveStart"
             />
             <YAxis 
-              tick={{ fontSize: 12 }}
               tickFormatter={(value) => `$${value.toLocaleString()}`}
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 12, fill: '#6B7280' }}
             />
             <Tooltip 
               formatter={(value: number) => [`$${value.toLocaleString()}`, 'Fees']}
               labelFormatter={(label) => label}
+              contentStyle={{
+                backgroundColor: 'white',
+                border: '1px solid #E5E7EB',
+                borderRadius: '6px',
+                padding: '8px'
+              }}
             />
             <Bar 
-              dataKey="fees" 
-              fill="#2563eb"
+              dataKey="fees"
+              fill="#3B82F6"
               radius={[4, 4, 0, 0]}
             />
           </BarChart>
