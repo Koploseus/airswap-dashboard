@@ -39,7 +39,7 @@ export function DAORevenue({ dailyData }: { dailyData: DailyData[] }) {
         fees: parseFloat(day.fees || '0'),
         volume: parseFloat(day.volume || '0')
       }))
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     // Calculate totals
     const total = filteredData.reduce((sum, day) => sum + day.fees, 0);
