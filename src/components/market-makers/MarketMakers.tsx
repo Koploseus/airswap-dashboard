@@ -1,5 +1,5 @@
 import { ServerData } from './types';
-import { ProtocolIds } from '@airswap/utils';
+import { ChainIds, ProtocolIds, getAccountUrl } from '@airswap/utils';
 
 export function MarketMakers({ servers }: { servers: ServerData[] }) {
   const getProtocolName = (protocolId: string) => {
@@ -26,13 +26,13 @@ export function MarketMakers({ servers }: { servers: ServerData[] }) {
             {servers.map((server) => (
               <tr key={server.id} className="hover:bg-gray-50">
                 <td className="px-4 py-3 text-sm">
-                  <a 
-                    href={server.url}
+                  <a
+                    href={getAccountUrl(ChainIds.MAINNET, server.id)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-blue-600 hover:text-blue-800"
                   >
-                    {server.url}
+                    {server.id}
                   </a>
                 </td>
                 <td className="px-4 py-3 text-center">
@@ -43,7 +43,7 @@ export function MarketMakers({ servers }: { servers: ServerData[] }) {
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap gap-1">
                     {server.protocols.map((protocol, index) => (
-                      <span 
+                      <span
                         key={`${server.id}-${protocol}-${index}`}
                         className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800"
                       >
