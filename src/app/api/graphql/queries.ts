@@ -20,7 +20,7 @@ export const DAILY_VOLUME_QUERY = gql`
 export const BIGGEST_SWAPS_QUERY = gql`
   query GetBigSwaps($timestamp24h: Int!, $timestamp7d: Int!, $timestamp30d: Int!, $minAmount: String!, $skip: Int!) {
     last24h: swapERC20S(
-      first: 1000,
+      first: 50,
       skip: $skip,
       where: { 
         blockTimestamp_gt: $timestamp24h,
@@ -36,7 +36,7 @@ export const BIGGEST_SWAPS_QUERY = gql`
       feeAmountUSD
     }
     last7d: swapERC20S(
-      first: 1000,
+      first: 50,
       skip: $skip,
       where: { 
         blockTimestamp_gt: $timestamp7d,
@@ -52,7 +52,7 @@ export const BIGGEST_SWAPS_QUERY = gql`
       feeAmountUSD
     }
     last30d: swapERC20S(
-      first: 1000,
+      first: 50,
       skip: $skip,
       where: { 
         blockTimestamp_gt: $timestamp30d,
@@ -72,7 +72,7 @@ export const BIGGEST_SWAPS_QUERY = gql`
 
 export const SERVERS_QUERY = gql`
   query GetServers {
-    servers(first: 1000) {
+    servers(first: 50) {
       id
       url
       protocols
