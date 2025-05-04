@@ -1,6 +1,7 @@
 import { SwapData } from './type';
 import { formatUSD } from '@/lib/utils/format';
 import { formatTimeAgo } from '@/lib/utils/date';
+import { BIGGEST_SWAPS_QUERY, fetchAllData } from '@/app/api/graphql/queries';
 
 const PERIODS = [
   { label: '24h' },
@@ -21,7 +22,13 @@ interface BiggestSwapsProps {
 }
 
 export function BiggestSwaps({ swaps, selectedTimeframe, onTimeframeChange }: BiggestSwapsProps) {
-  const getSwapsForTimeframe = () => swaps?.[selectedTimeframe] || [];
+  const getSwapsForTimeframe = () => {
+    const timeframeSwaps = swaps?.[selectedTimeframe] || [];
+    // Sort by amount in case we got more than 10 items
+    return timeframeSwaps
+      .sort((a, b) => parseFloat(b.senderAmountUSD) - parseFloat(a.senderAmountUSD))
+      .slice(0, 10);
+  };
 
   return (
     <section className="bg-white border border-gray-200 rounded-xl shadow-sm mb-6">

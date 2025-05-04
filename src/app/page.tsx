@@ -11,7 +11,7 @@ import { SwapData } from '@/components/swaps/type';
 import { ServerData } from '@/components/market-makers/types';
 import { DailyData } from '@/components/revenue/types';
 import { VolumeData } from '@/components/volume/type';
-import { DAILY_VOLUME_QUERY, BIGGEST_SWAPS_QUERY, SERVERS_QUERY } from '@/app/api/graphql/queries';
+import { DAILY_VOLUME_QUERY, BIGGEST_SWAPS_QUERY, SERVERS_QUERY, fetchAllData } from './api/graphql/queries';
 import { secureRequest } from '@/lib/utils';
 
 export default function Home() {
@@ -36,36 +36,50 @@ export default function Home() {
         const timestamp30d = now - (30 * 24 * 60 * 60);
         const timestamp4y = now - (4 * 365 * 24 * 60 * 60);
 
-        const [dailyResponse, swapsResponse, serversResponse] = await Promise.all([
-          secureRequest<{ dailies: DailyData[] }>(
+        const [dailyData, swapsData, serversData] = await Promise.all([
+          fetchAllData<DailyData>(
             DAILY_VOLUME_QUERY,
-            {
-              timestamp: timestamp4y
-            }
+            { timestamp: timestamp4y },
+            'dailies'
           ),
-          secureRequest<{
-            last24h: SwapData[];
-            last7d: SwapData[];
-            last30d: SwapData[];
-          }>(
-            BIGGEST_SWAPS_QUERY,
-            { 
-              timestamp24h,
-              timestamp7d,
-              timestamp30d,
-              minAmount: "50000"
-            }
-          ),
+          Promise.all([
+            fetchAllData<SwapData>(
+              BIGGEST_SWAPS_QUERY,
+              { 
+                timestamp24h,
+                timestamp7d,
+                timestamp30d,
+                minAmount: "50000"
+              },
+              'last24h'
+            ),
+            fetchAllData<SwapData>(
+              BIGGEST_SWAPS_QUERY,
+              { 
+                timestamp24h,
+                timestamp7d,
+                timestamp30d,
+                minAmount: "50000"
+              },
+              'last7d'
+            ),
+            fetchAllData<SwapData>(
+              BIGGEST_SWAPS_QUERY,
+              { 
+                timestamp24h,
+                timestamp7d,
+                timestamp30d,
+                minAmount: "50000"
+              },
+              'last30d'
+            )
+          ]),
           secureRequest<{ servers: ServerData[] }>(
             SERVERS_QUERY
           ),
         ]);
 
-        if (!dailyResponse.data || !swapsResponse.data || !serversResponse.data) {
-          throw new Error('Invalid response data');
-        }
-
-        setDailyData(dailyResponse.data.dailies);
+        setDailyData(dailyData);
 
         // Calculate volumes for the cards
         const calculateRollingVolume = (data: DailyData[], fromTimestamp: number) => {
@@ -92,18 +106,18 @@ export default function Home() {
         };
 
         const volumeData = {
-          '24h': calculateRollingVolume(dailyResponse.data.dailies, timestamp24h),
-          '7d': calculateRollingVolume(dailyResponse.data.dailies, timestamp7d),
-          '30d': calculateRollingVolume(dailyResponse.data.dailies, timestamp30d)
+          '24h': calculateRollingVolume(dailyData, timestamp24h),
+          '7d': calculateRollingVolume(dailyData, timestamp7d),
+          '30d': calculateRollingVolume(dailyData, timestamp30d)
         };
 
         setVolumes(volumeData);
         setBiggestSwaps({
-          '24h': swapsResponse.data.last24h,
-          '7d': swapsResponse.data.last7d,
-          '30d': swapsResponse.data.last30d
+          '24h': swapsData[0],
+          '7d': swapsData[1],
+          '30d': swapsData[2]
         });
-        setServers(serversResponse.data.servers);
+        setServers(serversData.data.servers);
         setLoading(false);
 
       } catch (err) {

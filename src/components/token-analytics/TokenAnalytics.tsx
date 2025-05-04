@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { TokenAnalyticsData, Swap, TokenVolume, TokenPairVolume } from './types';
-import { TOKEN_ANALYTICS_SWAPS_QUERY } from '@/app/api/graphql/queries';
+import { TOKEN_ANALYTICS_SWAPS_QUERY, fetchAllData } from '@/app/api/graphql/queries';
 import { secureRequest } from '@/lib/utils';
 
 interface TokenMeta {
@@ -78,14 +78,12 @@ export function TokenAnalytics() {
         const results: Record<PeriodLabel, Swap[]> = { '24h': [], '7d': [], '30d': [] };
         await Promise.all(PERIODS.map(async ({ label, seconds }) => {
           const since = now - seconds;
-          const response = await secureRequest<TokenAnalyticsData>(
+          const swaps = await fetchAllData<Swap>(
             TOKEN_ANALYTICS_SWAPS_QUERY,
-            { timestamp: since }
+            { timestamp: since },
+            'swapERC20S'
           );
-          if (!response.data || !('swapERC20S' in response.data)) {
-            throw new Error('Invalid response data');
-          }
-          results[label as PeriodLabel] = (response.data as any).swapERC20S;
+          results[label as PeriodLabel] = swaps;
         }));
         setSwapsByPeriod(results);
         setLoading(false);
@@ -125,7 +123,7 @@ export function TokenAnalytics() {
   const topTokens = aggregateTokenVolumes(swaps).slice(0, 5);
   const topPairs = aggregateTokenPairVolumes(swaps).slice(0, 5);
 
-  const renderToken = (address: string) => {
+  const renderToken = (address: string, showName = true) => {
     const lower = address.toLowerCase();
     const uniswapMeta = tokenMetaMap[lower];
     const cgMeta = coingeckoMeta[lower];
@@ -148,7 +146,7 @@ export function TokenAnalytics() {
             </span>
           )}
           <span className="font-medium">{meta.symbol}</span>
-          <span className="text-gray-500 text-xs">{meta.name}</span>
+          {showName && <span className="text-gray-500 text-xs hidden sm:inline">{meta.name}</span>}
         </span>
       );
     }
@@ -198,11 +196,16 @@ export function TokenAnalytics() {
               {topPairs.map((pair) => {
                 const [tokenA, tokenB] = pair.pair.split('-');
                 return (
-                  <div key={pair.pair} className="flex justify-between items-center px-2 py-1 hover:bg-gray-100 rounded">
-                    <span className="flex items-center gap-1">
-                      {renderToken(tokenA)}<span>/</span>{renderToken(tokenB)}
+                  <div
+                    key={pair.pair}
+                    className="flex flex-col sm:flex-row sm:justify-between sm:items-center px-2 py-1 hover:bg-gray-100 rounded"
+                  >
+                    <span className="flex items-center gap-1 text-sm sm:text-base">
+                      {renderToken(tokenA, false)}<span>/</span>{renderToken(tokenB, false)}
                     </span>
-                    <div className="text-right font-medium">${pair.volumeUSD.toLocaleString(undefined, {maximumFractionDigits: 2})}</div>
+                    <div className="text-right font-medium text-base sm:text-lg mt-1 sm:mt-0">
+                      ${pair.volumeUSD.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                    </div>
                   </div>
                 );
               })}
