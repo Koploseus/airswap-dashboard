@@ -29,37 +29,23 @@ interface BiggestSwapsProps {
   onTimeframeChange: (timeframe: PeriodLabel) => void;
 }
 
-// Fallback for known tokens in case metadata doesn't load
-const FALLBACK_TOKENS: Record<string, { symbol: string, name: string }> = {
-  '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2': { symbol: 'WETH', name: 'Wrapped Ether' },
-  '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48': { symbol: 'USDC', name: 'USD Coin' },
-  '0xdac17f958d2ee523a2206206994597c13d831ec7': { symbol: 'USDT', name: 'Tether USD' },
-  '0x6b175474e89094c44da98b954eedeac495271d0f': { symbol: 'DAI', name: 'Dai Stablecoin' },
-  '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599': { symbol: 'WBTC', name: 'Wrapped Bitcoin' },
-};
-
 export function BiggestSwaps({ swaps, selectedTimeframe, onTimeframeChange }: BiggestSwapsProps) {
   const [tokenMetaMap, setTokenMetaMap] = useState<Record<string, TokenMeta>>({});
   const [isMetadataLoaded, setIsMetadataLoaded] = useState(false);
 
   // Load token metadata from local file
   useEffect(() => {
-    console.log('Fetching token metadata for BiggestSwaps...');
     fetch('/tokenMetadata.json')
-      .then(res => {
-        console.log('Token metadata response status:', res.status);
-        return res.json();
-      })
+      .then(res => res.json())
       .then(data => {
-        console.log('Token metadata loaded for BiggestSwaps, token count:', Object.keys(data).length);
         if (data) {
           setTokenMetaMap(data);
           setIsMetadataLoaded(true);
         }
       })
       .catch(err => {
-        console.error('Error loading token metadata for BiggestSwaps:', err);
-        setIsMetadataLoaded(true); // Continue with fallback even if loading fails
+        console.error('Error loading token metadata:', err);
+        setIsMetadataLoaded(true);
       });
   }, []);
 
@@ -87,12 +73,7 @@ export function BiggestSwaps({ swaps, selectedTimeframe, onTimeframeChange }: Bi
       );
     }
     
-    // Fallback to hardcoded known tokens
-    if (FALLBACK_TOKENS[lowerAddress]) {
-      return FALLBACK_TOKENS[lowerAddress].symbol;
-    }
-    
-    // If no metadata is available, show the shortened address
+    // If token not found in metadata, show shortened address
     return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
   };
 
