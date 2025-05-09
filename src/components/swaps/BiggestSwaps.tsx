@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { SwapData } from './type';
 import { formatUSD } from '@/lib/utils/format';
 import { formatTimeAgo } from '@/lib/utils/date';
@@ -11,6 +12,13 @@ const PERIODS = [
 
 type PeriodLabel = '24h' | '7d' | '30d';
 
+interface TokenMeta {
+  address: string;
+  symbol: string;
+  name: string;
+  logoURI?: string;
+}
+
 interface BiggestSwapsProps {
   swaps: {
     '24h': SwapData[];
@@ -21,7 +29,73 @@ interface BiggestSwapsProps {
   onTimeframeChange: (timeframe: PeriodLabel) => void;
 }
 
+// Fallback for known tokens in case metadata doesn't load
+const FALLBACK_TOKENS: Record<string, { symbol: string, name: string }> = {
+  '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2': { symbol: 'WETH', name: 'Wrapped Ether' },
+  '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48': { symbol: 'USDC', name: 'USD Coin' },
+  '0xdac17f958d2ee523a2206206994597c13d831ec7': { symbol: 'USDT', name: 'Tether USD' },
+  '0x6b175474e89094c44da98b954eedeac495271d0f': { symbol: 'DAI', name: 'Dai Stablecoin' },
+  '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599': { symbol: 'WBTC', name: 'Wrapped Bitcoin' },
+};
+
 export function BiggestSwaps({ swaps, selectedTimeframe, onTimeframeChange }: BiggestSwapsProps) {
+  const [tokenMetaMap, setTokenMetaMap] = useState<Record<string, TokenMeta>>({});
+  const [isMetadataLoaded, setIsMetadataLoaded] = useState(false);
+
+  // Load token metadata from local file
+  useEffect(() => {
+    console.log('Fetching token metadata for BiggestSwaps...');
+    fetch('/tokenMetadata.json')
+      .then(res => {
+        console.log('Token metadata response status:', res.status);
+        return res.json();
+      })
+      .then(data => {
+        console.log('Token metadata loaded for BiggestSwaps, token count:', Object.keys(data).length);
+        if (data) {
+          setTokenMetaMap(data);
+          setIsMetadataLoaded(true);
+        }
+      })
+      .catch(err => {
+        console.error('Error loading token metadata for BiggestSwaps:', err);
+        setIsMetadataLoaded(true); // Continue with fallback even if loading fails
+      });
+  }, []);
+
+  // Helper function to format token addresses with metadata
+  const renderToken = (address: string) => {
+    if (!address) return "Unknown";
+    
+    const lowerAddress = address.toLowerCase();
+    const meta = tokenMetaMap[lowerAddress];
+    
+    if (meta) {
+      return (
+        <span className="flex items-center gap-1">
+          {meta.logoURI ? (
+            <img src={meta.logoURI} alt={meta.symbol} className="w-4 h-4 rounded-full" />
+          ) : (
+            <span className="w-4 h-4 flex items-center justify-center rounded-full bg-gray-200 text-gray-500">
+              <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                <circle cx="8" cy="8" r="8" />
+              </svg>
+            </span>
+          )}
+          <span>{meta.symbol}</span>
+        </span>
+      );
+    }
+    
+    // Fallback to hardcoded known tokens
+    if (FALLBACK_TOKENS[lowerAddress]) {
+      return FALLBACK_TOKENS[lowerAddress].symbol;
+    }
+    
+    // If no metadata is available, show the shortened address
+    return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+  };
+
   const getSwapsForTimeframe = () => {
     const timeframeSwaps = swaps?.[selectedTimeframe] || [];
     // Sort by amount in case we got more than 10 items
@@ -52,6 +126,7 @@ export function BiggestSwaps({ swaps, selectedTimeframe, onTimeframeChange }: Bi
             <tr className="bg-gray-50">
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Time</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Transaction</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Pair</th>
               <th className="px-4 py-3 text-right text-xs font-medium text-gray-500">Amount (USD)</th>
               <th className="px-4 py-3 text-right text-xs font-medium text-gray-500">Fee</th>
             </tr>
@@ -71,6 +146,13 @@ export function BiggestSwaps({ swaps, selectedTimeframe, onTimeframeChange }: Bi
                   >
                     {`${swap.transactionHash.slice(0, 6)}...${swap.transactionHash.slice(-4)}`}
                   </a>
+                </td>
+                <td className="px-4 py-3 text-sm">
+                  {swap.senderToken && swap.signerToken ? (
+                    <span className="whitespace-nowrap flex items-center gap-1">
+                      {renderToken(swap.senderToken)} <span className="text-gray-500">→</span> {renderToken(swap.signerToken)}
+                    </span>
+                  ) : "Unknown Pair"}
                 </td>
                 <td className="px-4 py-3 text-sm text-right text-green-600">
                   {formatUSD(parseFloat(swap.senderAmountUSD))}
